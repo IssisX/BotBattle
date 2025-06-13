@@ -1,0 +1,1999 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bot Forge & Fight - Battle Bots Game</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .game-container {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* Header */
+        .header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 1000;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .mode-indicator {
+            font-size: 18px;
+            font-weight: bold;
+            color: #4ecdc4;
+        }
+
+        /* Builder Mode Layout */
+        .builder-mode {
+            display: flex;
+            width: 100%;
+            margin-top: 60px;
+        }
+
+        .component-palette {
+            width: 250px;
+            background: rgba(0, 0, 0, 0.9);
+            border-right: 2px solid #4ecdc4;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .palette-section {
+            margin-bottom: 20px;
+        }
+
+        .palette-section h3 {
+            color: #4ecdc4;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #4ecdc4;
+            padding-bottom: 5px;
+        }
+
+        .component-item {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            margin: 5px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            cursor: grab;
+            transition: all 0.3s ease;
+            user-select: none;
+        }
+
+        .component-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateX(5px);
+        }
+
+        .component-item:active {
+            cursor: grabbing;
+        }
+
+        .component-icon {
+            width: 30px;
+            height: 30px;
+            margin-right: 10px;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .component-info {
+            flex: 1;
+        }
+
+        .component-name {
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .component-stats {
+            font-size: 11px;
+            color: #bbb;
+        }
+
+        .build-area {
+            flex: 1;
+            position: relative;
+            background: #1a1a2e;
+            overflow: hidden;
+        }
+
+        .build-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.3;
+        }
+
+        .stats-panel {
+            width: 300px;
+            background: rgba(0, 0, 0, 0.9);
+            border-left: 2px solid #4ecdc4;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .stats-section {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stats-section h3 {
+            color: #4ecdc4;
+            margin-bottom: 10px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stat-value {
+            font-weight: bold;
+        }
+
+        .stat-bar {
+            width: 100%;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 5px 0;
+        }
+
+        .stat-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+            border-radius: 10px;
+        }
+
+        .weight-fill {
+            background: linear-gradient(90deg, #4ecdc4, #ff6b6b);
+        }
+
+        .power-fill {
+            background: linear-gradient(90deg, #ffd93d, #ff6b6b);
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(78, 205, 196, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        /* Battle Mode Layout */
+        .battle-mode {
+            display: none;
+            width: 100%;
+            margin-top: 60px;
+            position: relative;
+        }
+
+        .battle-arena {
+            width: 100%;
+            height: calc(100vh - 60px);
+            position: relative;
+        }
+
+        .battle-hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        .hud-panel {
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 10px;
+            padding: 15px;
+            min-width: 200px;
+        }
+
+        .hud-title {
+            font-size: 14px;
+            color: #4ecdc4;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .health-bar {
+            width: 100%;
+            height: 15px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 5px 0;
+        }
+
+        .health-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4ecdc4, #44a08d);
+            border-radius: 8px;
+            transition: width 0.3s ease;
+        }
+
+        .controls-hint {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 10px;
+            padding: 15px;
+            font-size: 12px;
+            z-index: 100;
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            border: 3px solid #4ecdc4;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            z-index: 1000;
+            display: none;
+        }
+
+        .game-over h2 {
+            font-size: 36px;
+            margin-bottom: 20px;
+        }
+
+        .win {
+            color: #4ecdc4;
+        }
+
+        .lose {
+            color: #ff6b6b;
+        }
+
+        /* Dragging styles */
+        .dragging {
+            position: fixed;
+            z-index: 9999;
+            opacity: 0.8;
+            transform: scale(1.1);
+            pointer-events: none;
+        }
+
+        .drag-preview {
+            position: absolute;
+            border: 2px dashed #4ecdc4;
+            background: rgba(78, 205, 196, 0.2);
+            border-radius: 5px;
+            pointer-events: none;
+        }
+
+        /* Grid styling */
+        .grid-cell {
+            stroke: rgba(255, 255, 255, 0.1);
+            stroke-width: 1;
+            fill: none;
+        }
+
+        .grid-cell.occupied {
+            fill: rgba(78, 205, 196, 0.3);
+        }
+
+        .grid-cell.invalid {
+            fill: rgba(255, 107, 107, 0.3);
+        }
+
+        /* Component Colors */
+        .core { background-color: #ff6b6b; }
+        .structure { background-color: #8b4513; }
+        .metal-structure { background-color: #696969; }
+        .movement { background-color: #4ecdc4; }
+        .power { background-color: #ffd93d; }
+        .weapon { background-color: #ff4757; }
+        .utility { background-color: #a55eea; }
+
+        /* Responsive design */
+        @media (max-width: 1024px) {
+            .component-palette {
+                width: 200px;
+            }
+            
+            .stats-panel {
+                width: 250px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <!-- Header -->
+        <div class="header">
+            <h1>Bot Forge & Fight</h1>
+            <div class="mode-indicator" id="modeIndicator">Builder Mode</div>
+        </div>
+
+        <!-- Builder Mode -->
+        <div class="builder-mode" id="builderMode">
+            <!-- Component Palette -->
+            <div class="component-palette">
+                <div class="palette-section">
+                    <h3>Core</h3>
+                    <div class="component-item" data-component="control-unit">
+                        <div class="component-icon core">CPU</div>
+                        <div class="component-info">
+                            <div class="component-name">Control Unit</div>
+                            <div class="component-stats">Mass: 2kg | Power: +50W</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="palette-section">
+                    <h3>Structure</h3>
+                    <div class="component-item" data-component="wood-plank">
+                        <div class="component-icon structure">W</div>
+                        <div class="component-info">
+                            <div class="component-name">Wood Plank</div>
+                            <div class="component-stats">Mass: 1kg | HP: 20</div>
+                        </div>
+                    </div>
+                    <div class="component-item" data-component="metal-beam">
+                        <div class="component-icon metal-structure">M</div>
+                        <div class="component-info">
+                            <div class="component-name">Metal Beam</div>
+                            <div class="component-stats">Mass: 3kg | HP: 60</div>
+                        </div>
+                    </div>
+                    <div class="component-item" data-component="light-frame">
+                        <div class="component-icon structure">LF</div>
+                        <div class="component-info">
+                            <div class="component-name">Light Frame</div>
+                            <div class="component-stats">Mass: 2kg | HP: 40</div>
+                        </div>
+                    </div>
+                    <div class="component-item" data-component="heavy-frame">
+                        <div class="component-icon metal-structure">HF</div>
+                        <div class="component-info">
+                            <div class="component-name">Heavy Frame</div>
+                            <div class="component-stats">Mass: 5kg | HP: 80</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="palette-section">
+                    <h3>Movement</h3>
+                    <div class="component-item" data-component="small-wheel">
+                        <div class="component-icon movement">SW</div>
+                        <div class="component-info">
+                            <div class="component-name">Small Wheel</div>
+                            <div class="component-stats">Mass: 1kg | Grip: Low</div>
+                        </div>
+                    </div>
+                    <div class="component-item" data-component="large-wheel">
+                        <div class="component-icon movement">LW</div>
+                        <div class="component-info">
+                            <div class="component-name">Large Wheel</div>
+                            <div class="component-stats">Mass: 2kg | Grip: High</div>
+                        </div>
+                    </div>
+                    <div class="component-item" data-component="electric-motor">
+                        <div class="component-icon movement">EM</div>
+                        <div class="component-info">
+                            <div class="component-name">Electric Motor</div>
+                            <div class="component-stats">Mass: 2kg | Power: -15W</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="palette-section">
+                    <h3>Power</h3>
+                    <div class="component-item" data-component="small-battery">
+                        <div class="component-icon power">SB</div>
+                        <div class="component-info">
+                            <div class="component-name">Small Battery</div>
+                            <div class="component-stats">Mass: 2kg | Power: +30W</div>
+                        </div>
+                    </div>
+                    <div class="component-item" data-component="large-battery">
+                        <div class="component-icon power">LB</div>
+                        <div class="component-info">
+                            <div class="component-name">Large Battery</div>
+                            <div class="component-stats">Mass: 5kg | Power: +80W</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="palette-section">
+                    <h3>Weapons</h3>
+                    <div class="component-item" data-component="drill-spike">
+                        <div class="component-icon weapon">DS</div>
+                        <div class="component-info">
+                            <div class="component-name">Drill Spike</div>
+                            <div class="component-stats">Mass: 3kg | Power: -20W</div>
+                        </div>
+                    </div>
+                    <div class="component-item" data-component="spinner-blade">
+                        <div class="component-icon weapon">SB</div>
+                        <div class="component-info">
+                            <div class="component-name">Spinner Blade</div>
+                            <div class="component-stats">Mass: 4kg | Power: -30W</div>
+                        </div>
+                    </div>
+                    <div class="component-item" data-component="hammer-arm">
+                        <div class="component-icon weapon">HA</div>
+                        <div class="component-info">
+                            <div class="component-name">Hammer Arm</div>
+                            <div class="component-stats">Mass: 4kg | Power: -25W</div>
+                        </div>
+                    </div>
+                    <div class="component-item" data-component="flipper-panel">
+                        <div class="component-icon weapon">FP</div>
+                        <div class="component-info">
+                            <div class="component-name">Flipper Panel</div>
+                            <div class="component-stats">Mass: 3kg | Power: -20W</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="palette-section">
+                    <h3>Utility</h3>
+                    <div class="component-item" data-component="servo">
+                        <div class="component-icon utility">SV</div>
+                        <div class="component-info">
+                            <div class="component-name">Servo</div>
+                            <div class="component-stats">Mass: 1kg | Power: -10W</div>
+                        </div>
+                    </div>
+                    <div class="component-item" data-component="armor-plating">
+                        <div class="component-icon utility">AP</div>
+                        <div class="component-info">
+                            <div class="component-name">Armor Plating</div>
+                            <div class="component-stats">Mass: 6kg | HP: 120</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Build Area -->
+            <div class="build-area" id="buildArea">
+                <svg class="build-grid" id="buildGrid"></svg>
+            </div>
+
+            <!-- Stats Panel -->
+            <div class="stats-panel">
+                <div class="stats-section">
+                    <h3>Bot Statistics</h3>
+                    <div class="stat-item">
+                        <span>Total Weight:</span>
+                        <span class="stat-value" id="totalWeight">0 kg</span>
+                    </div>
+                    <div class="stat-bar">
+                        <div class="stat-fill weight-fill" id="weightBar" style="width: 0%"></div>
+                    </div>
+                    <div style="font-size: 12px; color: #bbb;">Max: 50kg</div>
+
+                    <div class="stat-item">
+                        <span>Power Usage:</span>
+                        <span class="stat-value" id="powerUsage">0W / 0W</span>
+                    </div>
+                    <div class="stat-bar">
+                        <div class="stat-fill power-fill" id="powerBar" style="width: 0%"></div>
+                    </div>
+
+                    <div class="stat-item">
+                        <span>Components:</span>
+                        <span class="stat-value" id="componentCount">0</span>
+                    </div>
+                </div>
+
+                <div class="stats-section">
+                    <h3>Component List</h3>
+                    <div id="componentList" style="max-height: 200px; overflow-y: auto;">
+                        <div style="color: #888; font-style: italic;">No components added</div>
+                    </div>
+                </div>
+
+                <div class="stats-section">
+                    <h3>Actions</h3>
+                    <div class="action-buttons">
+                        <button class="btn btn-secondary" id="clearBtn">Clear All</button>
+                        <button class="btn btn-primary" id="startBattleBtn" disabled>Start Battle!</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Battle Mode -->
+        <div class="battle-mode" id="battleMode">
+            <div class="battle-arena" id="battleArena"></div>
+            
+            <div class="battle-hud">
+                <div class="hud-panel">
+                    <div class="hud-title">Your Bot</div>
+                    <div class="health-bar">
+                        <div class="health-fill" id="playerHealth" style="width: 100%"></div>
+                    </div>
+                </div>
+                <div class="hud-panel">
+                    <div class="hud-title">Enemy Bot</div>
+                    <div class="health-bar">
+                        <div class="health-fill" id="enemyHealth" style="width: 100%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls-hint">
+                <strong>Controls:</strong><br>
+                WASD / Arrow Keys: Move<br>
+                Spacebar / J: Primary Weapon<br>
+                ESC: Return to Builder
+            </div>
+
+            <div class="game-over" id="gameOverScreen">
+                <h2 id="gameOverTitle">Game Over</h2>
+                <p id="gameOverMessage">Great battle!</p>
+                <button class="btn btn-primary" id="returnToBuilderBtn">Return to Builder</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Game state and constants
+        const GRID_SIZE = 40;
+        const MAX_WEIGHT = 50;
+        const ARENA_WIDTH = 1200;
+        const ARENA_HEIGHT = 800;
+
+        // Component definitions
+        const COMPONENTS = {
+            'control-unit': {
+                name: 'Control Unit',
+                type: 'core',
+                mass: 2,
+                durability: 100,
+                powerDraw: -50, // Negative means it provides power
+                color: '#ff6b6b',
+                required: true,
+                maxCount: 1
+            },
+            'wood-plank': {
+                name: 'Wood Plank',
+                type: 'structure',
+                mass: 1,
+                durability: 20,
+                powerDraw: 0,
+                color: '#8b4513'
+            },
+            'metal-beam': {
+                name: 'Metal Beam',
+                type: 'structure',
+                mass: 3,
+                durability: 60,
+                powerDraw: 0,
+                color: '#696969'
+            },
+            'light-frame': {
+                name: 'Light Frame',
+                type: 'structure',
+                mass: 2,
+                durability: 40,
+                powerDraw: 0,
+                color: '#8b4513'
+            },
+            'heavy-frame': {
+                name: 'Heavy Frame',
+                type: 'structure',
+                mass: 5,
+                durability: 80,
+                powerDraw: 0,
+                color: '#696969'
+            },
+            'small-wheel': {
+                name: 'Small Wheel',
+                type: 'movement',
+                mass: 1,
+                durability: 30,
+                powerDraw: 0,
+                color: '#4ecdc4',
+                grip: 0.6
+            },
+            'large-wheel': {
+                name: 'Large Wheel',
+                type: 'movement',
+                mass: 2,
+                durability: 50,
+                powerDraw: 0,
+                color: '#4ecdc4',
+                grip: 1.0
+            },
+            'electric-motor': {
+                name: 'Electric Motor',
+                type: 'movement',
+                mass: 2,
+                durability: 40,
+                powerDraw: 15,
+                color: '#4ecdc4',
+                torque: 100
+            },
+            'small-battery': {
+                name: 'Small Battery',
+                type: 'power',
+                mass: 2,
+                durability: 25,
+                powerDraw: -30,
+                color: '#ffd93d'
+            },
+            'large-battery': {
+                name: 'Large Battery',
+                type: 'power',
+                mass: 5,
+                durability: 40,
+                powerDraw: -80,
+                color: '#ffd93d'
+            },
+            'drill-spike': {
+                name: 'Drill Spike',
+                type: 'weapon',
+                mass: 3,
+                durability: 45,
+                powerDraw: 20,
+                color: '#ff4757',
+                damage: 15,
+                range: 60
+            },
+            'spinner-blade': {
+                name: 'Spinner Blade',
+                type: 'weapon',
+                mass: 4,
+                durability: 50,
+                powerDraw: 30,
+                color: '#ff4757',
+                damage: 25,
+                range: 80
+            },
+            'hammer-arm': {
+                name: 'Hammer Arm',
+                type: 'weapon',
+                mass: 4,
+                durability: 55,
+                powerDraw: 25,
+                color: '#ff4757',
+                damage: 30,
+                range: 70
+            },
+            'flipper-panel': {
+                name: 'Flipper Panel',
+                type: 'weapon',
+                mass: 3,
+                durability: 40,
+                powerDraw: 20,
+                color: '#ff4757',
+                damage: 20,
+                range: 60
+            },
+            'servo': {
+                name: 'Servo',
+                type: 'utility',
+                mass: 1,
+                durability: 30,
+                powerDraw: 10,
+                color: '#a55eea'
+            },
+            'armor-plating': {
+                name: 'Armor Plating',
+                type: 'utility',
+                mass: 6,
+                durability: 120,
+                powerDraw: 0,
+                color: '#a55eea'
+            }
+        };
+
+        // Game state
+        let gameState = {
+            mode: 'builder', // 'builder' or 'battle'
+            bot: {
+                components: [],
+                totalWeight: 0,
+                powerUsage: 0,
+                powerCapacity: 0
+            },
+            battle: {
+                engine: null,
+                render: null,
+                playerBot: null,
+                enemyBot: null,
+                gameEnded: false
+            },
+            input: {
+                keys: {}
+            }
+        };
+
+        // DOM elements
+        const builderMode = document.getElementById('builderMode');
+        const battleMode = document.getElementById('battleMode');
+        const buildArea = document.getElementById('buildArea');
+        const buildGrid = document.getElementById('buildGrid');
+        const modeIndicator = document.getElementById('modeIndicator');
+
+        // Initialize the game
+        function init() {
+            initializeGrid();
+            initializeDragAndDrop();
+            initializeEventListeners();
+            updateStats();
+        }
+
+        // Create the build grid
+        function initializeGrid() {
+            const rect = buildArea.getBoundingClientRect();
+            const cols = Math.floor(rect.width / GRID_SIZE);
+            const rows = Math.floor(rect.height / GRID_SIZE);
+
+            buildGrid.style.width = `${cols * GRID_SIZE}px`;
+            buildGrid.style.height = `${rows * GRID_SIZE}px`;
+
+            // Draw grid lines
+            for (let x = 0; x <= cols; x++) {
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', x * GRID_SIZE);
+                line.setAttribute('y1', 0);
+                line.setAttribute('x2', x * GRID_SIZE);
+                line.setAttribute('y2', rows * GRID_SIZE);
+                line.setAttribute('stroke', 'rgba(255,255,255,0.1)');
+                line.setAttribute('stroke-width', '1');
+                buildGrid.appendChild(line);
+            }
+
+            for (let y = 0; y <= rows; y++) {
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', 0);
+                line.setAttribute('y1', y * GRID_SIZE);
+                line.setAttribute('x2', cols * GRID_SIZE);
+                line.setAttribute('y2', y * GRID_SIZE);
+                line.setAttribute('stroke', 'rgba(255,255,255,0.1)');
+                line.setAttribute('stroke-width', '1');
+                buildGrid.appendChild(line);
+            }
+        }
+
+        // Initialize drag and drop functionality
+        function initializeDragAndDrop() {
+            const componentItems = document.querySelectorAll('.component-item');
+            
+            componentItems.forEach(item => {
+                item.addEventListener('dragstart', handleDragStart);
+                item.addEventListener('mousedown', handleMouseDown);
+                item.draggable = true;
+            });
+
+            buildArea.addEventListener('dragover', handleDragOver);
+            buildArea.addEventListener('drop', handleDrop);
+            buildArea.addEventListener('click', handleBuildAreaClick);
+
+            // Global mouse events for custom drag handling
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+        }
+
+        let dragData = {
+            isDragging: false,
+            componentType: null,
+            dragElement: null,
+            offset: { x: 0, y: 0 }
+        };
+
+        function handleDragStart(e) {
+            e.dataTransfer.setData('text/plain', e.currentTarget.dataset.component);
+        }
+
+        function handleMouseDown(e) {
+            if (e.button !== 0) return; // Only left click
+
+            const componentType = e.currentTarget.dataset.component;
+            const component = COMPONENTS[componentType];
+            
+            // Check if we can place more of this component
+            if (component.maxCount) {
+                const currentCount = gameState.bot.components.filter(c => c.type === componentType).length;
+                if (currentCount >= component.maxCount) {
+                    return;
+                }
+            }
+
+            dragData.isDragging = true;
+            dragData.componentType = componentType;
+            dragData.offset = {
+                x: e.offsetX,
+                y: e.offsetY
+            };
+
+            // Create drag preview
+            const dragElement = e.currentTarget.cloneNode(true);
+            dragElement.classList.add('dragging');
+            dragElement.style.left = `${e.clientX - dragData.offset.x}px`;
+            dragElement.style.top = `${e.clientY - dragData.offset.y}px`;
+            document.body.appendChild(dragElement);
+            dragData.dragElement = dragElement;
+
+            e.preventDefault();
+        }
+
+        function handleMouseMove(e) {
+            if (!dragData.isDragging || !dragData.dragElement) return;
+
+            dragData.dragElement.style.left = `${e.clientX - dragData.offset.x}px`;
+            dragData.dragElement.style.top = `${e.clientY - dragData.offset.y}px`;
+
+            // Show preview on grid
+            const buildRect = buildArea.getBoundingClientRect();
+            const x = e.clientX - buildRect.left;
+            const y = e.clientY - buildRect.top;
+            
+            if (x >= 0 && x < buildRect.width && y >= 0 && y < buildRect.height) {
+                showPlacementPreview(x, y);
+            }
+        }
+
+        function handleMouseUp(e) {
+            if (!dragData.isDragging) return;
+
+            // Clean up drag element
+            if (dragData.dragElement) {
+                document.body.removeChild(dragData.dragElement);
+            }
+
+            // Try to place component
+            const buildRect = buildArea.getBoundingClientRect();
+            const x = e.clientX - buildRect.left;
+            const y = e.clientY - buildRect.top;
+            
+            if (x >= 0 && x < buildRect.width && y >= 0 && y < buildRect.height) {
+                const gridX = Math.floor(x / GRID_SIZE);
+                const gridY = Math.floor(y / GRID_SIZE);
+                placeComponent(dragData.componentType, gridX, gridY);
+            }
+
+            // Reset drag state
+            dragData.isDragging = false;
+            dragData.componentType = null;
+            dragData.dragElement = null;
+            hidePlacementPreview();
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            const componentType = e.dataTransfer.getData('text/plain');
+            const rect = buildArea.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const gridX = Math.floor(x / GRID_SIZE);
+            const gridY = Math.floor(y / GRID_SIZE);
+            
+            placeComponent(componentType, gridX, gridY);
+        }
+
+        function handleBuildAreaClick(e) {
+            // Remove component on right click
+            if (e.button === 2 || e.ctrlKey) {
+                e.preventDefault();
+                const rect = buildArea.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const gridX = Math.floor(x / GRID_SIZE);
+                const gridY = Math.floor(y / GRID_SIZE);
+                
+                removeComponentAt(gridX, gridY);
+            }
+        }
+
+        // Placement preview
+        let previewElement = null;
+
+        function showPlacementPreview(x, y) {
+            const gridX = Math.floor(x / GRID_SIZE);
+            const gridY = Math.floor(y / GRID_SIZE);
+            
+            if (!previewElement) {
+                previewElement = document.createElement('div');
+                previewElement.className = 'drag-preview';
+                buildArea.appendChild(previewElement);
+            }
+
+            previewElement.style.left = `${gridX * GRID_SIZE}px`;
+            previewElement.style.top = `${gridY * GRID_SIZE}px`;
+            previewElement.style.width = `${GRID_SIZE}px`;
+            previewElement.style.height = `${GRID_SIZE}px`;
+            
+            // Check if placement is valid
+            const canPlace = canPlaceComponent(dragData.componentType, gridX, gridY);
+            previewElement.style.borderColor = canPlace ? '#4ecdc4' : '#ff6b6b';
+            previewElement.style.backgroundColor = canPlace ? 'rgba(78, 205, 196, 0.2)' : 'rgba(255, 107, 107, 0.2)';
+        }
+
+        function hidePlacementPreview() {
+            if (previewElement) {
+                buildArea.removeChild(previewElement);
+                previewElement = null;
+            }
+        }
+
+        // Component placement logic
+        function canPlaceComponent(componentType, gridX, gridY) {
+            const component = COMPONENTS[componentType];
+            
+            // Check if position is within grid bounds
+            const rect = buildArea.getBoundingClientRect();
+            const maxCols = Math.floor(rect.width / GRID_SIZE);
+            const maxRows = Math.floor(rect.height / GRID_SIZE);
+            
+            if (gridX < 0 || gridX >= maxCols || gridY < 0 || gridY >= maxRows) {
+                return false;
+            }
+
+            // Check if position is occupied
+            const existingComponent = gameState.bot.components.find(c => c.gridX === gridX && c.gridY === gridY);
+            if (existingComponent) {
+                return false;
+            }
+
+            // Check component count limits
+            if (component.maxCount) {
+                const currentCount = gameState.bot.components.filter(c => c.type === componentType).length;
+                if (currentCount >= component.maxCount) {
+                    return false;
+                }
+            }
+
+            // Check weight limit
+            if (gameState.bot.totalWeight + component.mass > MAX_WEIGHT) {
+                return false;
+            }
+
+            // If this is not the first component, check connectivity
+            if (gameState.bot.components.length > 0) {
+                if (!isConnectedToBot(gridX, gridY)) {
+                    return false;
+                }
+            } else {
+                // First component must be Control Unit
+                if (componentType !== 'control-unit') {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        function isConnectedToBot(gridX, gridY) {
+            // Check if the position is adjacent to any existing component
+            const adjacentPositions = [
+                { x: gridX - 1, y: gridY },
+                { x: gridX + 1, y: gridY },
+                { x: gridX, y: gridY - 1 },
+                { x: gridX, y: gridY + 1 }
+            ];
+
+            return adjacentPositions.some(pos => 
+                gameState.bot.components.find(c => c.gridX === pos.x && c.gridY === pos.y)
+            );
+        }
+
+        function placeComponent(componentType, gridX, gridY) {
+            if (!canPlaceComponent(componentType, gridX, gridY)) {
+                return false;
+            }
+
+            const component = COMPONENTS[componentType];
+            const newComponent = {
+                id: Date.now() + Math.random(),
+                type: componentType,
+                name: component.name,
+                gridX: gridX,
+                gridY: gridY,
+                x: gridX * GRID_SIZE,
+                y: gridY * GRID_SIZE,
+                mass: component.mass,
+                durability: component.durability,
+                maxDurability: component.durability,
+                powerDraw: component.powerDraw,
+                color: component.color,
+                ...component // Copy all other properties
+            };
+
+            gameState.bot.components.push(newComponent);
+            updateStats();
+            renderBot();
+            return true;
+        }
+
+        function removeComponentAt(gridX, gridY) {
+            const index = gameState.bot.components.findIndex(c => c.gridX === gridX && c.gridY === gridY);
+            if (index !== -1) {
+                const component = gameState.bot.components[index];
+                
+                // Don't allow removing Control Unit if it would disconnect the bot
+                if (component.type === 'control-unit' && gameState.bot.components.length > 1) {
+                    // Check if removing this would disconnect other components
+                    const otherComponents = gameState.bot.components.filter((_, i) => i !== index);
+                    if (!areAllComponentsConnected(otherComponents)) {
+                        return false;
+                    }
+                }
+
+                gameState.bot.components.splice(index, 1);
+                updateStats();
+                renderBot();
+                return true;
+            }
+            return false;
+        }
+
+        function areAllComponentsConnected(components) {
+            if (components.length <= 1) return true;
+
+            const visited = new Set();
+            const toVisit = [components[0]];
+            visited.add(components[0].id);
+
+            while (toVisit.length > 0) {
+                const current = toVisit.pop();
+                
+                // Find adjacent components
+                const adjacentPositions = [
+                    { x: current.gridX - 1, y: current.gridY },
+                    { x: current.gridX + 1, y: current.gridY },
+                    { x: current.gridX, y: current.gridY - 1 },
+                    { x: current.gridX, y: current.gridY + 1 }
+                ];
+
+                adjacentPositions.forEach(pos => {
+                    const adjacent = components.find(c => c.gridX === pos.x && c.gridY === pos.y);
+                    if (adjacent && !visited.has(adjacent.id)) {
+                        visited.add(adjacent.id);
+                        toVisit.push(adjacent);
+                    }
+                });
+            }
+
+            return visited.size === components.length;
+        }
+
+        // Render the bot in the build area
+        function renderBot() {
+            // Clear existing bot visualization
+            const existingBotElements = buildArea.querySelectorAll('.bot-component');
+            existingBotElements.forEach(el => el.remove());
+
+            // Render each component
+            gameState.bot.components.forEach(component => {
+                const element = document.createElement('div');
+                element.className = 'bot-component';
+                element.style.position = 'absolute';
+                element.style.left = `${component.x}px`;
+                element.style.top = `${component.y}px`;
+                element.style.width = `${GRID_SIZE}px`;
+                element.style.height = `${GRID_SIZE}px`;
+                element.style.backgroundColor = component.color;
+                element.style.border = '2px solid #fff';
+                element.style.borderRadius = '4px';
+                element.style.display = 'flex';
+                element.style.alignItems = 'center';
+                element.style.justifyContent = 'center';
+                element.style.fontSize = '10px';
+                element.style.fontWeight = 'bold';
+                element.style.color = '#fff';
+                element.style.textShadow = '1px 1px 1px rgba(0,0,0,0.5)';
+                element.style.cursor = 'pointer';
+                element.title = `${component.name}\nHP: ${component.durability}/${component.maxDurability}\nMass: ${component.mass}kg`;
+                
+                // Add component abbreviation
+                const abbrev = getComponentAbbreviation(component.type);
+                element.textContent = abbrev;
+
+                // Add health indicator
+                const healthPercent = (component.durability / component.maxDurability) * 100;
+                if (healthPercent < 100) {
+                    element.style.opacity = Math.max(0.3, healthPercent / 100);
+                }
+
+                buildArea.appendChild(element);
+            });
+        }
+
+        function getComponentAbbreviation(componentType) {
+            const abbrevs = {
+                'control-unit': 'CPU',
+                'wood-plank': 'W',
+                'metal-beam': 'M',
+                'light-frame': 'LF',
+                'heavy-frame': 'HF',
+                'small-wheel': 'SW',
+                'large-wheel': 'LW',
+                'electric-motor': 'EM',
+                'small-battery': 'SB',
+                'large-battery': 'LB',
+                'drill-spike': 'DS',
+                'spinner-blade': 'SB',
+                'hammer-arm': 'HA',
+                'flipper-panel': 'FP',
+                'servo': 'SV',
+                'armor-plating': 'AP'
+            };
+            return abbrevs[componentType] || '?';
+        }
+
+        // Update statistics display
+        function updateStats() {
+            // Calculate totals
+            gameState.bot.totalWeight = gameState.bot.components.reduce((sum, c) => sum + c.mass, 0);
+            gameState.bot.powerUsage = gameState.bot.components.reduce((sum, c) => sum + Math.max(0, c.powerDraw), 0);
+            gameState.bot.powerCapacity = gameState.bot.components.reduce((sum, c) => sum + Math.max(0, -c.powerDraw), 0);
+
+            // Update weight display
+            document.getElementById('totalWeight').textContent = `${gameState.bot.totalWeight} kg`;
+            const weightPercent = (gameState.bot.totalWeight / MAX_WEIGHT) * 100;
+            document.getElementById('weightBar').style.width = `${Math.min(100, weightPercent)}%`;
+
+            // Update power display
+            document.getElementById('powerUsage').textContent = `${gameState.bot.powerUsage}W / ${gameState.bot.powerCapacity}W`;
+            const powerPercent = gameState.bot.powerCapacity > 0 ? (gameState.bot.powerUsage / gameState.bot.powerCapacity) * 100 : 0;
+            document.getElementById('powerBar').style.width = `${Math.min(100, powerPercent)}%`;
+
+            // Update component count
+            document.getElementById('componentCount').textContent = gameState.bot.components.length;
+
+            // Update component list
+            const componentList = document.getElementById('componentList');
+            if (gameState.bot.components.length === 0) {
+                componentList.innerHTML = '<div style="color: #888; font-style: italic;">No components added</div>';
+            } else {
+                componentList.innerHTML = gameState.bot.components.map(c => `
+                    <div style="display: flex; justify-content: space-between; padding: 5px; margin: 2px 0; background: rgba(255,255,255,0.1); border-radius: 3px;">
+                        <span>${c.name}</span>
+                        <span style="color: #aaa;">${c.mass}kg</span>
+                    </div>
+                `).join('');
+            }
+
+            // Update start battle button
+            const hasControlUnit = gameState.bot.components.some(c => c.type === 'control-unit');
+            const withinWeightLimit = gameState.bot.totalWeight <= MAX_WEIGHT;
+            const withinPowerLimit = gameState.bot.powerUsage <= gameState.bot.powerCapacity;
+            const hasMovement = gameState.bot.components.some(c => c.type === 'electric-motor');
+
+            const canStartBattle = hasControlUnit && withinWeightLimit && withinPowerLimit && hasMovement && gameState.bot.components.length > 1;
+            
+            document.getElementById('startBattleBtn').disabled = !canStartBattle;
+            
+            if (!canStartBattle) {
+                let reasons = [];
+                if (!hasControlUnit) reasons.push('Need Control Unit');
+                if (!withinWeightLimit) reasons.push('Over weight limit');
+                if (!withinPowerLimit) reasons.push('Insufficient power');
+                if (!hasMovement) reasons.push('Need motor for movement');
+                if (gameState.bot.components.length <= 1) reasons.push('Need more components');
+                
+                document.getElementById('startBattleBtn').title = `Cannot start battle: ${reasons.join(', ')}`;
+            } else {
+                document.getElementById('startBattleBtn').title = 'Start the battle!';
+            }
+        }
+
+        // Event listeners
+        function initializeEventListeners() {
+            document.getElementById('clearBtn').addEventListener('click', clearBot);
+            document.getElementById('startBattleBtn').addEventListener('click', startBattle);
+            document.getElementById('returnToBuilderBtn').addEventListener('click', returnToBuilder);
+
+            // Keyboard controls
+            document.addEventListener('keydown', handleKeyDown);
+            document.addEventListener('keyup', handleKeyUp);
+
+            // Right-click context menu prevention
+            buildArea.addEventListener('contextmenu', e => e.preventDefault());
+        }
+
+        function clearBot() {
+            if (confirm('Are you sure you want to clear all components?')) {
+                gameState.bot.components = [];
+                updateStats();
+                renderBot();
+            }
+        }
+
+        function handleKeyDown(e) {
+            gameState.input.keys[e.code] = true;
+            
+            if (gameState.mode === 'battle') {
+                // Prevent default for game controls
+                if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space', 'KeyJ', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+                    e.preventDefault();
+                }
+                
+                if (e.code === 'Escape') {
+                    returnToBuilder();
+                }
+            }
+        }
+
+        function handleKeyUp(e) {
+            gameState.input.keys[e.code] = false;
+        }
+
+        // Battle Mode
+        function startBattle() {
+            gameState.mode = 'battle';
+            builderMode.style.display = 'none';
+            battleMode.style.display = 'block';
+            modeIndicator.textContent = 'Battle Mode';
+            
+            initializeBattle();
+        }
+
+        function returnToBuilder() {
+            gameState.mode = 'builder';
+            battleMode.style.display = 'none';
+            builderMode.style.display = 'flex';
+            modeIndicator.textContent = 'Builder Mode';
+            
+            if (gameState.battle.engine) {
+                Matter.Engine.clear(gameState.battle.engine);
+                if (gameState.battle.render) {
+                    Matter.Render.stop(gameState.battle.render);
+                    gameState.battle.render.canvas.remove();
+                }
+            }
+            
+            document.getElementById('gameOverScreen').style.display = 'none';
+            gameState.battle.gameEnded = false;
+        }
+
+        function initializeBattle() {
+            const battleArena = document.getElementById('battleArena');
+            
+            // Clear any existing battle
+            if (gameState.battle.engine) {
+                Matter.Engine.clear(gameState.battle.engine);
+                if (gameState.battle.render) {
+                    Matter.Render.stop(gameState.battle.render);
+                    gameState.battle.render.canvas.remove();
+                }
+            }
+
+            // Create Matter.js engine
+            const engine = Matter.Engine.create();
+            engine.world.gravity.y = 0; // Top-down view, no gravity
+
+            // Create renderer
+            const render = Matter.Render.create({
+                element: battleArena,
+                engine: engine,
+                options: {
+                    width: ARENA_WIDTH,
+                    height: ARENA_HEIGHT,
+                    wireframes: false,
+                    background: '#1a1a2e',
+                    showVelocity: false,
+                    showAngleIndicator: false,
+                    showDebug: false
+                }
+            });
+
+            gameState.battle.engine = engine;
+            gameState.battle.render = render;
+
+            // Create arena walls
+            const walls = [
+                Matter.Bodies.rectangle(ARENA_WIDTH / 2, -25, ARENA_WIDTH, 50, { isStatic: true, render: { fillStyle: '#444' } }),
+                Matter.Bodies.rectangle(ARENA_WIDTH / 2, ARENA_HEIGHT + 25, ARENA_WIDTH, 50, { isStatic: true, render: { fillStyle: '#444' } }),
+                Matter.Bodies.rectangle(-25, ARENA_HEIGHT / 2, 50, ARENA_HEIGHT, { isStatic: true, render: { fillStyle: '#444' } }),
+                Matter.Bodies.rectangle(ARENA_WIDTH + 25, ARENA_HEIGHT / 2, 50, ARENA_HEIGHT, { isStatic: true, render: { fillStyle: '#444' } })
+            ];
+
+            Matter.World.add(engine.world, walls);
+
+            // Create player bot
+            gameState.battle.playerBot = createBattleBot(gameState.bot.components, 200, 200, 'player');
+            Matter.World.add(engine.world, gameState.battle.playerBot.composite);
+
+            // Create enemy bot
+            const enemyComponents = createEnemyBot();
+            gameState.battle.enemyBot = createBattleBot(enemyComponents, ARENA_WIDTH - 200, ARENA_HEIGHT - 200, 'enemy');
+            Matter.World.add(engine.world, gameState.battle.enemyBot.composite);
+
+            // Set up collision detection
+            Matter.Events.on(engine, 'collisionStart', handleCollision);
+
+            // Start the engine and renderer
+            Matter.Engine.run(engine);
+            Matter.Render.run(render);
+
+            // Start game loop
+            gameLoop();
+        }
+
+        function createBattleBot(components, startX, startY, team) {
+            const composite = Matter.Composite.create();
+            const bodies = [];
+            const weapons = [];
+            const motors = [];
+            let coreBody = null;
+            
+            const offsetX = startX - (components[0].gridX * GRID_SIZE);
+            const offsetY = startY - (components[0].gridY * GRID_SIZE);
+
+            // Create physics bodies for each component
+            components.forEach(component => {
+                const x = component.x + offsetX + GRID_SIZE / 2;
+                const y = component.y + offsetY + GRID_SIZE / 2;
+                
+                let body;
+                
+                if (component.type.includes('wheel')) {
+                    // Wheels are circular
+                    body = Matter.Bodies.circle(x, y, GRID_SIZE / 3, {
+                        render: {
+                            fillStyle: component.color,
+                            strokeStyle: '#fff',
+                            lineWidth: 2
+                        },
+                        friction: component.grip || 0.8,
+                        frictionAir: 0.01,
+                        density: component.mass / (Math.PI * Math.pow(GRID_SIZE / 3, 2))
+                    });
+                } else {
+                    // Other components are rectangular
+                    body = Matter.Bodies.rectangle(x, y, GRID_SIZE * 0.8, GRID_SIZE * 0.8, {
+                        render: {
+                            fillStyle: component.color,
+                            strokeStyle: '#fff',
+                            lineWidth: 2
+                        },
+                        frictionAir: 0.02,
+                        density: component.mass / (GRID_SIZE * GRID_SIZE)
+                    });
+                }
+
+                // Store component data on the body
+                body.componentData = { ...component, team };
+                
+                if (component.type === 'control-unit') {
+                    coreBody = body;
+                    body.render.strokeStyle = '#ff0000';
+                    body.render.lineWidth = 3;
+                }
+
+                if (component.type.includes('weapon')) {
+                    weapons.push(body);
+                }
+
+                if (component.type === 'electric-motor') {
+                    motors.push(body);
+                }
+
+                bodies.push(body);
+                Matter.Composite.add(composite, body);
+            });
+
+            // Create constraints to connect adjacent components
+            for (let i = 0; i < components.length; i++) {
+                for (let j = i + 1; j < components.length; j++) {
+                    const comp1 = components[i];
+                    const comp2 = components[j];
+                    
+                    const dx = Math.abs(comp1.gridX - comp2.gridX);
+                    const dy = Math.abs(comp1.gridY - comp2.gridY);
+                    
+                    // Connect adjacent components
+                    if ((dx === 1 && dy === 0) || (dx === 0 && dy === 1)) {
+                        const constraint = Matter.Constraint.create({
+                            bodyA: bodies[i],
+                            bodyB: bodies[j],
+                            length: GRID_SIZE,
+                            stiffness: 0.8,
+                            damping: 0.1,
+                            render: {
+                                visible: false
+                            }
+                        });
+                        Matter.Composite.add(composite, constraint);
+                    }
+                }
+            }
+
+            return {
+                composite,
+                bodies,
+                weapons,
+                motors,
+                coreBody,
+                team,
+                health: coreBody ? coreBody.componentData.durability : 0,
+                maxHealth: coreBody ? coreBody.componentData.maxDurability : 0
+            };
+        }
+
+        function createEnemyBot() {
+            // Create a simple but effective enemy bot
+            return [
+                {
+                    id: 'enemy-core',
+                    type: 'control-unit',
+                    name: 'Control Unit',
+                    gridX: 1,
+                    gridY: 1,
+                    x: GRID_SIZE,
+                    y: GRID_SIZE,
+                    mass: 2,
+                    durability: 100,
+                    maxDurability: 100,
+                    powerDraw: -50,
+                    color: '#ff6b6b'
+                },
+                {
+                    id: 'enemy-frame1',
+                    type: 'heavy-frame',
+                    name: 'Heavy Frame',
+                    gridX: 0,
+                    gridY: 1,
+                    x: 0,
+                    y: GRID_SIZE,
+                    mass: 5,
+                    durability: 80,
+                    maxDurability: 80,
+                    powerDraw: 0,
+                    color: '#696969'
+                },
+                {
+                    id: 'enemy-frame2',
+                    type: 'heavy-frame',
+                    name: 'Heavy Frame',
+                    gridX: 2,
+                    gridY: 1,
+                    x: GRID_SIZE * 2,
+                    y: GRID_SIZE,
+                    mass: 5,
+                    durability: 80,
+                    maxDurability: 80,
+                    powerDraw: 0,
+                    color: '#696969'
+                },
+                {
+                    id: 'enemy-motor1',
+                    type: 'electric-motor',
+                    name: 'Electric Motor',
+                    gridX: 0,
+                    gridY: 0,
+                    x: 0,
+                    y: 0,
+                    mass: 2,
+                    durability: 40,
+                    maxDurability: 40,
+                    powerDraw: 15,
+                    color: '#4ecdc4',
+                    torque: 100
+                },
+                {
+                    id: 'enemy-motor2',
+                    type: 'electric-motor',
+                    name: 'Electric Motor',
+                    gridX: 2,
+                    gridY: 0,
+                    x: GRID_SIZE * 2,
+                    y: 0,
+                    mass: 2,
+                    durability: 40,
+                    maxDurability: 40,
+                    powerDraw: 15,
+                    color: '#4ecdc4',
+                    torque: 100
+                },
+                {
+                    id: 'enemy-wheel1',
+                    type: 'large-wheel',
+                    name: 'Large Wheel',
+                    gridX: 0,
+                    gridY: 2,
+                    x: 0,
+                    y: GRID_SIZE * 2,
+                    mass: 2,
+                    durability: 50,
+                    maxDurability: 50,
+                    powerDraw: 0,
+                    color: '#4ecdc4',
+                    grip: 1.0
+                },
+                {
+                    id: 'enemy-wheel2',
+                    type: 'large-wheel',
+                    name: 'Large Wheel',
+                    gridX: 2,
+                    gridY: 2,
+                    x: GRID_SIZE * 2,
+                    y: GRID_SIZE * 2,
+                    mass: 2,
+                    durability: 50,
+                    maxDurability: 50,
+                    powerDraw: 0,
+                    color: '#4ecdc4',
+                    grip: 1.0
+                },
+                {
+                    id: 'enemy-weapon',
+                    type: 'spinner-blade',
+                    name: 'Spinner Blade',
+                    gridX: 1,
+                    gridY: 0,
+                    x: GRID_SIZE,
+                    y: 0,
+                    mass: 4,
+                    durability: 50,
+                    maxDurability: 50,
+                    powerDraw: 30,
+                    color: '#ff4757',
+                    damage: 25,
+                    range: 80
+                },
+                {
+                    id: 'enemy-battery',
+                    type: 'large-battery',
+                    name: 'Large Battery',
+                    gridX: 1,
+                    gridY: 2,
+                    x: GRID_SIZE,
+                    y: GRID_SIZE * 2,
+                    mass: 5,
+                    durability: 40,
+                    maxDurability: 40,
+                    powerDraw: -80,
+                    color: '#ffd93d'
+                }
+            ];
+        }
+
+        function gameLoop() {
+            if (gameState.mode !== 'battle' || gameState.battle.gameEnded) return;
+
+            updatePlayerControls();
+            updateEnemyAI();
+            updateHealthBars();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updatePlayerControls() {
+            const playerBot = gameState.battle.playerBot;
+            if (!playerBot || !playerBot.composite) return;
+
+            const force = 0.01;
+            const torque = 0.02;
+
+            // Movement controls
+            if (gameState.input.keys['KeyW'] || gameState.input.keys['ArrowUp']) {
+                // Forward
+                playerBot.motors.forEach(motor => {
+                    const angle = motor.angle;
+                    const forceVector = {
+                        x: Math.cos(angle) * force,
+                        y: Math.sin(angle) * force
+                    };
+                    Matter.Body.applyForce(motor, motor.position, forceVector);
+                });
+            }
+
+            if (gameState.input.keys['KeyS'] || gameState.input.keys['ArrowDown']) {
+                // Backward
+                playerBot.motors.forEach(motor => {
+                    const angle = motor.angle + Math.PI;
+                    const forceVector = {
+                        x: Math.cos(angle) * force,
+                        y: Math.sin(angle) * force
+                    };
+                    Matter.Body.applyForce(motor, motor.position, forceVector);
+                });
+            }
+
+            if (gameState.input.keys['KeyA'] || gameState.input.keys['ArrowLeft']) {
+                // Turn left
+                playerBot.bodies.forEach(body => {
+                    Matter.Body.setAngularVelocity(body, body.angularVelocity - torque);
+                });
+            }
+
+            if (gameState.input.keys['KeyD'] || gameState.input.keys['ArrowRight']) {
+                // Turn right
+                playerBot.bodies.forEach(body => {
+                    Matter.Body.setAngularVelocity(body, body.angularVelocity + torque);
+                });
+            }
+
+            // Weapon controls
+            if (gameState.input.keys['Space'] || gameState.input.keys['KeyJ']) {
+                activateWeapons(playerBot);
+            }
+        }
+
+        function updateEnemyAI() {
+            const enemyBot = gameState.battle.enemyBot;
+            const playerBot = gameState.battle.playerBot;
+            
+            if (!enemyBot || !playerBot || !enemyBot.coreBody || !playerBot.coreBody) return;
+
+            const enemyPos = enemyBot.coreBody.position;
+            const playerPos = playerBot.coreBody.position;
+            
+            // Calculate direction to player
+            const dx = playerPos.x - enemyPos.x;
+            const dy = playerPos.y - enemyPos.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance > 150) {
+                // Move towards player
+                const force = 0.008;
+                const angle = Math.atan2(dy, dx);
+                
+                enemyBot.motors.forEach(motor => {
+                    const forceVector = {
+                        x: Math.cos(angle) * force,
+                        y: Math.sin(angle) * force
+                    };
+                    Matter.Body.applyForce(motor, motor.position, forceVector);
+                });
+                
+                // Rotate towards player
+                const targetAngle = angle;
+                const currentAngle = enemyBot.coreBody.angle;
+                let angleDiff = targetAngle - currentAngle;
+                
+                // Normalize angle difference
+                while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+                while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+                
+                const torque = angleDiff * 0.01;
+                enemyBot.bodies.forEach(body => {
+                    Matter.Body.setAngularVelocity(body, body.angularVelocity + torque);
+                });
+            } else {
+                // Attack player
+                activateWeapons(enemyBot);
+            }
+        }
+
+        function activateWeapons(bot) {
+            bot.weapons.forEach(weapon => {
+                // Create spinning effect for spinner weapons
+                if (weapon.componentData.type === 'spinner-blade') {
+                    Matter.Body.setAngularVelocity(weapon, 0.3);
+                }
+                
+                // Add force-based attacks
+                const force = 0.02;
+                const angle = weapon.angle;
+                const forceVector = {
+                    x: Math.cos(angle) * force,
+                    y: Math.sin(angle) * force
+                };
+                Matter.Body.applyForce(weapon, weapon.position, forceVector);
+            });
+        }
+
+        function handleCollision(event) {
+            event.pairs.forEach(pair => {
+                const { bodyA, bodyB } = pair;
+                
+                if (!bodyA.componentData || !bodyB.componentData) return;
+                
+                // Skip collisions between same team
+                if (bodyA.componentData.team === bodyB.componentData.team) return;
+                
+                // Calculate damage based on collision force and weapon properties
+                let damage = 0;
+                let targetBody = null;
+                let attackerBody = null;
+
+                if (bodyA.componentData.type && bodyA.componentData.type.includes('weapon')) {
+                    attackerBody = bodyA;
+                    targetBody = bodyB;
+                    damage = bodyA.componentData.damage || 10;
+                } else if (bodyB.componentData.type && bodyB.componentData.type.includes('weapon')) {
+                    attackerBody = bodyB;
+                    targetBody = bodyA;
+                    damage = bodyB.componentData.damage || 10;
+                } else {
+                    // Regular collision damage
+                    const relativeVelocity = Math.sqrt(
+                        Math.pow(bodyA.velocity.x - bodyB.velocity.x, 2) +
+                        Math.pow(bodyA.velocity.y - bodyB.velocity.y, 2)
+                    );
+                    
+                    if (relativeVelocity > 5) {
+                        damage = Math.floor(relativeVelocity * 2);
+                        targetBody = Math.random() < 0.5 ? bodyA : bodyB;
+                    }
+                }
+
+                if (damage > 0 && targetBody) {
+                    dealDamage(targetBody, damage);
+                    createCollisionEffect(targetBody.position);
+                }
+            });
+        }
+
+        function dealDamage(body, damage) {
+            body.componentData.durability -= damage;
+            
+            // Update visual feedback
+            const healthPercent = Math.max(0, body.componentData.durability / body.componentData.maxDurability);
+            body.render.fillStyle = interpolateColor(body.componentData.color, '#000000', 1 - healthPercent);
+            
+            if (body.componentData.durability <= 0) {
+                destroyComponent(body);
+            }
+        }
+
+        function destroyComponent(body) {
+            const bot = body.componentData.team === 'player' ? gameState.battle.playerBot : gameState.battle.enemyBot;
+            
+            // Remove from composite
+            Matter.Composite.remove(bot.composite, body);
+            
+            // Remove from bot arrays
+            bot.bodies = bot.bodies.filter(b => b !== body);
+            if (bot.weapons.includes(body)) {
+                bot.weapons = bot.weapons.filter(w => w !== body);
+            }
+            if (bot.motors.includes(body)) {
+                bot.motors = bot.motors.filter(m => m !== body);
+            }
+            
+            // Create debris
+            const debris = Matter.Bodies.rectangle(
+                body.position.x,
+                body.position.y,
+                GRID_SIZE * 0.3,
+                GRID_SIZE * 0.3,
+                {
+                    render: {
+                        fillStyle: '#333'
+                    },
+                    frictionAir: 0.1,
+                    density: 0.001
+                }
+            );
+            
+            // Add some random velocity to debris
+            Matter.Body.setVelocity(debris, {
+                x: (Math.random() - 0.5) * 10,
+                y: (Math.random() - 0.5) * 10
+            });
+            
+            Matter.World.add(gameState.battle.engine.world, debris);
+            
+            // Check for game over
+            if (body.componentData.type === 'control-unit') {
+                endGame(body.componentData.team === 'player' ? 'lose' : 'win');
+            }
+            
+            createExplosionEffect(body.position);
+        }
+
+        function createCollisionEffect(position) {
+            // Create spark particles
+            for (let i = 0; i < 5; i++) {
+                const spark = Matter.Bodies.circle(
+                    position.x + (Math.random() - 0.5) * 20,
+                    position.y + (Math.random() - 0.5) * 20,
+                    2,
+                    {
+                        render: {
+                            fillStyle: '#ffaa00'
+                        },
+                        frictionAir: 0.3,
+                        density: 0.0001
+                    }
+                );
+                
+                Matter.Body.setVelocity(spark, {
+                    x: (Math.random() - 0.5) * 15,
+                    y: (Math.random() - 0.5) * 15
+                });
+                
+                Matter.World.add(gameState.battle.engine.world, spark);
+                
+                // Remove spark after short time
+                setTimeout(() => {
+                    if (gameState.battle.engine) {
+                        Matter.World.remove(gameState.battle.engine.world, spark);
+                    }
+                }, 500);
+            }
+        }
+
+        function createExplosionEffect(position) {
+            // Create explosion particles
+            for (let i = 0; i < 15; i++) {
+                const particle = Matter.Bodies.circle(
+                    position.x,
+                    position.y,
+                    Math.random() * 5 + 2,
+                    {
+                        render: {
+                            fillStyle: `hsl(${Math.random() * 60}, 100%, 60%)`
+                        },
+                        frictionAir: 0.2,
+                        density: 0.0001
+                    }
+                );
+                
+                const angle = (i / 15) * Math.PI * 2;
+                const speed = Math.random() * 20 + 10;
+                
+                Matter.Body.setVelocity(particle, {
+                    x: Math.cos(angle) * speed,
+                    y: Math.sin(angle) * speed
+                });
+                
+                Matter.World.add(gameState.battle.engine.world, particle);
+                
+                // Remove particle after time
+                setTimeout(() => {
+                    if (gameState.battle.engine) {
+                        Matter.World.remove(gameState.battle.engine.world, particle);
+                    }
+                }, 1000);
+            }
+        }
+
+        function updateHealthBars() {
+            const playerBot = gameState.battle.playerBot;
+            const enemyBot = gameState.battle.enemyBot;
+            
+            if (playerBot && playerBot.coreBody) {
+                const healthPercent = (playerBot.coreBody.componentData.durability / playerBot.coreBody.componentData.maxDurability) * 100;
+                document.getElementById('playerHealth').style.width = `${Math.max(0, healthPercent)}%`;
+            }
+            
+            if (enemyBot && enemyBot.coreBody) {
+                const healthPercent = (enemyBot.coreBody.componentData.durability / enemyBot.coreBody.componentData.maxDurability) * 100;
+                document.getElementById('enemyHealth').style.width = `${Math.max(0, healthPercent)}%`;
+            }
+        }
+
+        function endGame(result) {
+            gameState.battle.gameEnded = true;
+            
+            const gameOverScreen = document.getElementById('gameOverScreen');
+            const title = document.getElementById('gameOverTitle');
+            const message = document.getElementById('gameOverMessage');
+            
+            if (result === 'win') {
+                title.textContent = 'Victory!';
+                title.className = 'win';
+                message.textContent = 'Your bot dominated the arena!';
+            } else {
+                title.textContent = 'Defeat!';
+                title.className = 'lose';
+                message.textContent = 'Your bot was destroyed. Try a different design!';
+            }
+            
+            gameOverScreen.style.display = 'block';
+        }
+
+        function interpolateColor(color1, color2, factor) {
+            // Simple color interpolation
+            const c1 = hexToRgb(color1);
+            const c2 = hexToRgb(color2);
+            
+            if (!c1 || !c2) return color1;
+            
+            const r = Math.round(c1.r + (c2.r - c1.r) * factor);
+            const g = Math.round(c1.g + (c2.g - c1.g) * factor);
+            const b = Math.round(c1.b + (c2.b - c1.b) * factor);
+            
+            return `rgb(${r}, ${g}, ${b})`;
+        }
+
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : null;
+        }
+
+        // Initialize the game
+        init();
+    </script>
+</body>
+</html>
